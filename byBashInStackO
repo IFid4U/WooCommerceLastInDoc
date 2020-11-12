@@ -1,0 +1,55 @@
+ * Auto Complete all WooCommerce virtual orders.
+ * 
+ * @param  int  $order_id The order ID to check
+ * @return void
+ */
+function custom_woocommerce_auto_complete_virtual_orders( $order_id ) {
+
+    // if there is no order id, exit
+    if ( ! $order_id ) {
+        return;
+    }
+
+    // No updated status for orders delivered with Bank wire, Cash on delivery and Cheque payment methods.
+    if ( in_array( $order->get_payment_method(), array( 'bacs', 'cod', 'cheque', '' ) ) ) {
+        return;
+    } 
+
+    // get the order and its exit
+    $order = wc_get_order( $order_id );
+    $items = $order->get_items();
+
+    // if there are no items, exit
+    if ( 0 >= count( $items ) ) {
+        return;
+    }
+
+    // go through each item
+    foreach ( $items as $item ) {
+
+        // if it is a variation
+        if ( '0' != $item['variation_id'] ) {
+
+            // make a product based upon variation
+            $product = new WC_Product( $item['variation_id'] );
+
+        } else {
+
+            // else make a product off of the product id
+            $product = new WC_Product( $item['product_id'] );
+
+        }
+
+        // if the product isn't virtual, exit
+        if ( ! $product->is_virtual() ) {
+            return;
+        }
+    }
+
+    /*
+     * If we made it this far, then all of our items are virual
+     * We set the order to completed.
+     */
+    $order->update_status( 'completed' );
+}
+add_action( 'woocommerce_thankyou', 'custom_woocommerce_auto_complete_virtual_orders' );
